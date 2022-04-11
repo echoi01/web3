@@ -1,0 +1,414 @@
+
+
+
+// const rtm_bid_string = '(69.00, $22.83);(165.00, $35.38)';
+const rtm_bid_string = '(1, $1.45);(517, $24.81);(517.1, $29.43);(550, $29.43)';
+const bid_string = '(0.00, $2.66);(25.00, $4.44);(60.00, $9.48);(110.00, $16.67);(175.00, $26.03);(200.00, $29.62);(225.00, $33.22);(250.00, $36.82);(270.00, $39.70);(285.00, $41.86)'
+
+const auc = (bid_string, miso_meter) => {
+    let total = 0;
+    let lastBidMw;
+    let curBidMw;
+    let lastBidPrice;
+    let curBidPrice;
+    const useBidSlope = 1;
+    const bidStringArr = bid_string.split(';').map((bid) => bid.split(', ').map((val) => parseFloat(val.replace(/[()$]/g, ""))));
+    console.log(bidStringArr);
+
+    bidStringArr.forEach((bid, idx) => {
+        if (idx === 0) {
+            curBidMw = bid[0];
+            curBidPrice = bid[1];
+            console.log(curBidMw);
+            console.log(curBidPrice);
+
+            if (curBidMw > miso_meter) {
+                total = total + miso_meter * curBidPrice;
+            } else {
+                total = total + curBidMw * curBidPrice;
+            }
+        } else {
+            lastBidMw = curBidMw;
+            lastBidPrice = curBidPrice;
+            console.log(lastBidPrice);
+            console.log(lastBidMw);
+
+            curBidMw = bid[0];
+            curBidPrice = bid[1];
+            console.log(curBidMw);
+            console.log(curBidPrice);
+
+            if (lastBidMw <= miso_meter) {
+                const thisSegMW = (miso_meter > curBidMw) ? curBidMw - lastBidMw : miso_meter - lastBidMw;
+                const thisSegPrice = (useBidSlope === 1)
+                    ? (lastBidPrice + (lastBidPrice + thisSegMW * (curBidPrice - lastBidPrice) / (curBidMw - lastBidMw))) / 2
+                    : curBidPrice;
+                total = total + (thisSegMW * thisSegPrice);
+            }
+        }   
+    });
+    if (miso_meter > curBidMw) {
+        total = total + (miso_meter - curBidMw) * curBidPrice;
+    }
+    
+    total = (miso_meter < 0) ? 0 : Math.max(total, 0);
+    console.log('total',total);
+
+    console.log( { lmp: (total/(miso_meter || 1)).toFixed(2), amt: (total/12).toFixed(2) });
+};
+
+// auc(513);
+// auc(513.59);
+// auc(575);
+
+auc(rtm_bid_string, 1)
+// auc(rtm_bid_string, -10)
+// auc(rtm_bid_string, 10)
+// auc(rtm_bid_string, 275.80)
+
+
+const auc2 = (miso_meter) => {
+    const parseBidString2 = (bidString, dispatch) => {
+        if (!bidString || !bidString.length) return [[0, 0], [0, 0]];
+        if (!bidString.includes(";")) return [parseFloat(bidString.split([","])[1].replace(/[()$]/g, ""))];
+        const bidArr = bidString.split(";").map((temp2) => temp2.split(", ").map((temp3) => parseFloat(temp3.replace(/[()$]/g, ""))));
+        let i = 0;
+        while (bidArr[i] && (bidArr[i][0] < dispatch)) i++;
+        if (i === 0) return [bidArr[i][1]];
+        if (i === bidArr.length) return [bidArr[i - 1][1]];
+        return [bidArr[i - 1], bidArr[i]];
+    }
+
+    if (rtm_bid_string?.length) {
+        const [rtm_prev_bid, rtm_curr_bid] = parseBidString2(rtm_bid_string, miso_meter);
+        const rtm_auc = rtm_curr_bid
+            ? ((rtm_prev_bid[1] + (rtm_prev_bid[1] + ((miso_meter - rtm_prev_bid[0]) * (rtm_curr_bid[1] - rtm_prev_bid[1]) / (rtm_curr_bid[0] - rtm_prev_bid[0])))) / 2)
+            : rtm_prev_bid;
+        const rtm_gen_cost_auc = (miso_meter < 0) ? 0 : Math.max(rtm_auc, 0);
+        // amounts.calc_miso_rtm_gen_cost_lmp = rtm_gen_cost_auc;
+        // amounts.calc_miso_rtm_gen_cost_amt = rtm_gen_cost_auc * (miso_meter - dam_energy_mw) / -12;
+        const total = rtm_gen_cost_auc * miso_meter;
+
+        console.log(`miso meter auc2: ${miso_meter}, total: ${total}`);
+        
+    }
+}
+
+// auc2(513);
+// auc2(513.59);
+// auc2(575);
+
+
+
+// new new
+
+const rtm_bid_string = '(1, $1.45);(517, $24.81);(517.1, $29.43);(550, $29.43)';
+const bid_string = '(0.00, $2.66);(25.00, $4.44);(60.00, $9.48);(110.00, $16.67);(175.00, $26.03);(200.00, $29.62);(225.00, $33.22);(250.00, $36.82);(270.00, $39.70);(285.00, $41.86)'
+
+const auc = (bid_string, miso_meter) => {
+    let total = 0;
+    let lastBidMw;
+    let curBidMw;
+    let lastBidPrice;
+    let curBidPrice;
+    const useBidSlope = 1;
+    const bidStringArr = bid_string.split(';').map((bid) => bid.split(', ').map((val) => parseFloat(val.replace(/[()$]/g, ""))));
+
+    bidStringArr.forEach((bid, idx) => {
+        if (idx === 0) {
+            curBidMw = bid[0];
+            curBidPrice = bid[1];
+            // console.log('curBidMw', curBidMw);
+            // console.log('curBidPrice', curBidPrice);
+
+            if (curBidMw > miso_meter) {
+                total = total + miso_meter * curBidPrice;
+            } else {
+                total = total + curBidMw * curBidPrice;
+            }
+        } else {
+            lastBidMw = curBidMw;
+            lastBidPrice = curBidPrice;
+            // console.log('lastBidMw', lastBidMw);
+            // console.log('lastBidPrice', lastBidPrice);
+
+            curBidMw = bid[0];
+            curBidPrice = bid[1];
+            // console.log('curBidMw', curBidMw);
+            // console.log('curBidPrice', curBidPrice);
+
+            if (lastBidMw <= miso_meter) {
+                const thisSegMW = (miso_meter > curBidMw) ? curBidMw - lastBidMw : miso_meter - lastBidMw;
+                const thisSegPrice = (useBidSlope === 1)
+                    ? (lastBidPrice + (lastBidPrice + thisSegMW * (curBidPrice - lastBidPrice) / (curBidMw - lastBidMw))) / 2
+                    : curBidPrice;
+                total = total + (thisSegMW * thisSegPrice);
+            }
+        }   
+    });
+    if (miso_meter > curBidMw) {
+        total = total + (miso_meter - curBidMw) * curBidPrice;
+    }
+    
+    total = (miso_meter < 0) ? 0 : Math.max(total, 0);
+    console.log('total',total);
+
+    console.log( { lmp: (total/(miso_meter || 1)).toFixed(2), amt: (total/12).toFixed(2) });
+};
+
+auc(bid_string, 1);
+auc(bid_string, 50);
+auc(bid_string, 150);
+auc(bid_string, 250);
+auc(bid_string, 280);
+
+const bid_string = '(0.00, $2.66);(25.00, $4.44);(60.00, $9.48);(110.00, $16.67);(175.00, $26.03);(200.00, $29.62);(225.00, $33.22);(250.00, $36.82);(270.00, $39.70);(285.00, $41.86)';
+
+const auc = (bid_string, miso_meter) => {
+  let total = 0;
+  let lastBidMw;
+  let curBidMw;
+  let lastBidPrice;
+  let curBidPrice;
+  const useBidSlope = 1;
+  const bidStringArr = bid_string.split(';').map((bid) => bid.split(', ').map((val) => parseFloat(val.replace(/[()$]/g, ''))));
+
+  bidStringArr.forEach((bid, idx) => {
+    if (idx === 0) {
+      [curBidMw, curBidPrice] = bid;
+
+      if (curBidMw > miso_meter) {
+        total += miso_meter * curBidPrice;
+      } else {
+        total += curBidMw * curBidPrice;
+      }
+    } else {
+      lastBidMw = curBidMw;
+      lastBidPrice = curBidPrice;
+
+      [curBidMw, curBidPrice] = bid;
+
+      if (lastBidMw <= miso_meter) {
+        const thisSegMW = (miso_meter > curBidMw) ? curBidMw - lastBidMw : miso_meter - lastBidMw;
+        const thisSegPrice = (useBidSlope === 1)
+          ? (lastBidPrice + (lastBidPrice + thisSegMW * ((curBidPrice - lastBidPrice) / (curBidMw - lastBidMw)))) / 2
+          : curBidPrice;
+        total += (thisSegMW * thisSegPrice);
+      }
+    }
+  });
+  if (miso_meter > curBidMw) {
+    total += (miso_meter - curBidMw) * curBidPrice;
+  }
+
+  total = (miso_meter < 0) ? 0 : Math.max(total, 0);
+  console.log('total', total);
+
+  console.log({
+    lmp: Math.round((total / (miso_meter || 1)) * 100) / 100,
+    amt: Math.round((total / 12) * 100) / 100,
+  });
+};
+
+auc(bid_string, );
+
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+const axios = require("axios");
+const createViolation = (objectType, startTime, endTime, type, subType, variant, value, notes) => ({
+    objectType: objectType,
+    startTime: startTime,
+    endTime: endTime,
+    type: type,
+    subType: subType,
+    variant: variant,
+    value: value,
+    note: notes
+});
+const createVisualAnalyticsUrl = (tenant) => tenant.includes("localhost") ? "http://localhost:51237" : `${tenant}/api/visual-analytics`;
+const createApi = (url, header) => axios.create({
+    baseURL: url,
+    headers: header
+});
+const getValue = (record, propertyName) => {
+    const item = record[propertyName];
+    if (item) {
+        if (typeof item === "object") {
+            return item.value;
+        } else {
+            return item;
+        }
+    }
+    return 0;
+};
+const getNote = (record, propertyName) => {
+    const item = record[propertyName];
+    if (item && typeof item === "object") {
+        return item.notes;
+    }
+    return "";
+};
+const auc = (bid_string, miso_meter) => {
+  let total = 0;
+  let lastBidMw;
+  let curBidMw;
+  let lastBidPrice;
+  let curBidPrice;
+  const useBidSlope = 1;
+  const bidStringArr = bid_string.split(";").map((bid) => bid.split(", ").map((val) => parseFloat(val.replace(/[()$]/g, ""))));
+
+  bidStringArr.forEach((bid, idx) => {
+    if (idx === 0) {
+      [curBidMw, curBidPrice] = bid;
+
+      if (curBidMw > miso_meter) {
+        total += miso_meter * curBidPrice;
+      } else {
+        total += curBidMw * curBidPrice;
+      }
+    } else {
+      lastBidMw = curBidMw;
+      lastBidPrice = curBidPrice;
+
+      [curBidMw, curBidPrice] = bid;
+
+      if (lastBidMw <= miso_meter) {
+        const thisSegMW = (miso_meter > curBidMw) ? curBidMw - lastBidMw : miso_meter - lastBidMw;
+        const thisSegPrice = (useBidSlope === 1)
+          ? (lastBidPrice + (lastBidPrice + thisSegMW * ((curBidPrice - lastBidPrice) / (curBidMw - lastBidMw)))) / 2
+          : curBidPrice;
+        total += (thisSegMW * thisSegPrice);
+      }
+    }
+  });
+  if (miso_meter > curBidMw) {
+    total += (miso_meter - curBidMw) * curBidPrice;
+  }
+
+  total = (miso_meter < 0) ? 0 : Math.max(total, 0);
+  console.log("total", total);
+
+  return({
+    lmp: Math.round((total / (miso_meter || 1)) * 100) / 100,
+    amt: Math.round((total / 12) * 100) / 100,
+  });
+};
+module.exports = async (callback, hostContext) => {
+    const model = hostContext.context;
+    const tenant = hostContext.user.tenant;
+    const token = `${hostContext.user.userName}|${hostContext.user.apiKey}`;
+    const header = {
+        "x-token": token
+    };
+    const url = createVisualAnalyticsUrl(tenant);
+    const api = createApi(url, header);
+    let ruleViolations = [];
+    let response = {
+        success: false,
+        context: ruleViolations,
+        error: {
+            messages: []
+        }
+    };
+    try {
+        const httpsResponse = await api.get(`/business-rules/${model.businessRuleId}/intervals`, {
+            params: {
+                startTime: model.startTime,
+                endTime: model.endTime,
+                variants: model.variant,
+                types: model.type,
+                subTypes: model.subType,
+                realTimeFlag: model.realTimeFlag
+            }
+        });
+        const data = httpsResponse.data.data;
+        if (data) {           
+            data.forEach((item) => {
+                if (!item.subType) {
+                    const dam_energy_mw = getValue(item, "miso_dart_mktrslt_dam_energy_mw");
+                    const dam_lmp = getValue(item, "miso_dart_dam_lmp");
+                    const dam_reg_mw = getValue(item, "miso_dart_mktrslt_dam_reg_mw");
+                    const dam_reg_mcp = getValue(item, "miso_dart_dam_reg_mcp");
+                    const dam_spin_mw = getValue(item, "miso_dart_mktrslt_dam_spin_mw");
+                    const dam_spin_mcp = getValue(item, "miso_dart_dam_spin_mcp");
+                    const dam_supp_mw = getValue(item, "miso_dart_mktrslt_dam_supp_mw");
+                    const dam_supp_mcp = getValue(item, "miso_dart_dam_supp_mcp");
+                    const rtm_reg_mw = getValue(item, "miso_dart_dispatch_rtm_reg_mw");
+                    const rtm_reg_mcp = getValue(item, "miso_dart_rtm_reg_mcp") || getValue(item, "miso_dart_dispatch_rtm_reg_mcp");
+                    const rtm_energy_mw = getValue(item, "miso_dart_dispatch_rtm_energy_mw");
+                    const rtm_lmp = getValue(item, "miso_dart_rtm_lmp");
+                    const rtm_spin_mw = getValue(item, "miso_dart_dispatch_rtm_spin_mw");
+                    const rtm_spin_mcp = getValue(item, "miso_dart_rtm_spin_mcp") || getValue(item, "miso_dart_dispatch_rtm_spin_mcp");
+                    const rtm_supp_mw = getValue(item, "miso_dart_dispatch_rtm_supp_mw");
+                    const rtm_supp_mcp = getValue(item, "miso_dart_rtm_supp_mcp") || getValue(item, "miso_dart_dispatch_rtm_supp_mcp");
+                    const rtm_bid_string = getNote(item, "miso_dart_rtm_energy_bid_string");
+                    const dam_bid_string = getNote(item, "miso_dart_dam_energy_bid_string");
+                    const miso_meter = getValue(item, "miso_meter_mw") || getValue(item, "miso_internal_meter_mw");
+                    const dam_no_load = getValue(item, "miso_param_dam_no_load_cost");
+                    const dam_min_econ = getValue(item, "miso_param_dam_min_econ");
+                    const rtm_min_econ = getValue(item, "miso_param_rtm_min_econ");
+                    const amounts = {
+                        calc_miso_deviation_qty: 0,
+                        calc_miso_dam_en_amt: 0,
+                        calc_miso_dam_reg_amt: 0,
+                        calc_miso_dam_spin_amt: 0,
+                        calc_miso_dam_supp_amt: 0,
+                        calc_miso_rtm_reg_amt: 0,
+                        calc_miso_rtm_en_amt: 0,
+                        calc_miso_rtm_spin_amt: 0,
+                        calc_miso_rtm_supp_amt: 0,
+                        calc_miso_deviation_amt: 0,
+                        calc_miso_pnl: 0,
+                        calc_miso_dam_gen_cost_amt: 0,
+                        calc_miso_rtm_gen_cost_amt: 0,
+                        calc_miso_dam_pnl_amt: 0,
+                        calc_miso_rtm_pnl_amt: 0,
+                        calc_miso_net_pnl: 0, 
+                        calc_miso_dam_gen_cost_lmp: 0,
+                        calc_miso_rtm_gen_cost_lmp: 0,
+                    };
+                    amounts.calc_miso_deviation_qty = miso_meter - rtm_energy_mw;
+                    amounts.calc_miso_dam_en_amt = (dam_energy_mw * dam_lmp) / 12;
+                    amounts.calc_miso_dam_reg_amt = (dam_reg_mw * dam_reg_mcp) / 12;
+                    amounts.calc_miso_dam_spin_amt = (dam_spin_mw * dam_spin_mcp) / 12;
+                    amounts.calc_miso_dam_supp_amt = (dam_supp_mw * dam_supp_mcp ) / 12;
+                    amounts.calc_miso_rtm_en_amt = ((miso_meter - dam_energy_mw) / 12) * rtm_lmp;
+                    amounts.calc_miso_rtm_reg_amt = ((rtm_reg_mw - dam_reg_mw) / 12) * rtm_reg_mcp;
+                    amounts.calc_miso_rtm_spin_amt = ((rtm_spin_mw - dam_spin_mw) / 12) * rtm_spin_mcp;
+                    amounts.calc_miso_rtm_supp_amt = ((rtm_supp_mw - dam_supp_mw) / 12) * rtm_supp_mcp;
+                    amounts.calc_miso_deviation_amt = amounts.calc_miso_deviation_qty * rtm_lmp / 12;
+                    if (dam_bid_string?.length) {
+                        const { lmp, amt } = auc(dam_bid_string, dam_energy_mw);
+                        amounts.calc_miso_dam_gen_cost_lmp = lmp;
+                        amounts.calc_miso_dam_gen_cost_amt = amt;
+                    }
+                    if (rtm_bid_string?.length) {
+                        const { lmp, amt } = auc(rtm_bid_string, miso_meter);
+                        amounts.calc_miso_rtm_gen_cost_lmp = lmp;
+                        amounts.calc_miso_rtm_gen_cost_amt = amt;
+                    }
+                    amounts.calc_miso_dam_pnl_amt = (amounts.calc_miso_dam_en_amt + amounts.calc_miso_dam_reg_amt + amounts.calc_miso_dam_spin_amt + amounts.calc_miso_dam_supp_amt) + amounts.calc_miso_dam_gen_cost_amt;
+                    amounts.calc_miso_rtm_pnl_amt = (amounts.calc_miso_rtm_en_amt + amounts.calc_miso_rtm_reg_amt + amounts.calc_miso_rtm_spin_amt + amounts.calc_miso_rtm_supp_amt) + amounts.calc_miso_rtm_gen_cost_amt;
+
+                    if(dam_energy_mw >=  dam_min_econ || miso_meter >= rtm_min_econ){
+                        amounts.calc_miso_net_pnl = amounts.calc_miso_dam_pnl_amt + amounts.calc_miso_rtm_pnl_amt - dam_no_load / 12 ;
+                    }
+                    else{
+                        amounts.calc_miso_net_pnl = amounts.calc_miso_dam_pnl_amt + amounts.calc_miso_rtm_pnl_amt;
+                    }
+                    
+                    Object.keys(amounts).forEach((prop) => {
+                        const value = amounts[prop].toFixed(2);
+                        ruleViolations.push(createViolation(prop, item.startTime, item.endTime, item.type, item.subType, item.variant, value, null));
+                    });
+                };
+            });
+        };
+    } catch (err) {
+        response.error.messages.push({
+            message: err.message
+        });
+        console.log(err.message);
+    };
+    response.success = response.error.messages.length === 0;
+    callback(null, response);
+}
